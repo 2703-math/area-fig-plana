@@ -17,26 +17,23 @@ st.markdown("""
 
 # ===================== UTILIDADES =====================
 def trapz(width_fn, a, b, n=500):
-    """Integração numérica pela regra do trapézio."""
     if b <= a: return 0.0
     xs = np.linspace(a, b, n)
     ys = np.array([width_fn(x) for x in xs])
     h = (b - a) / (n - 1)
     return h * (0.5*ys[0] + 0.5*ys[-1] + np.sum(ys[1:-1]))
 
-def build_area_anim(width_fn, y_max, x_off=0, N=80, color="#3b82f6", label="y"):
-    """Constrói figura com animação de preenchimento por scanline horizontal."""
+def build_area_anim(width_fn, y_max, x_off=0, N=80, color="#3b82f6"):
     fig = go.Figure()
-    # Borda fixa
     ys_full = np.linspace(0, y_max, 250)
     top_x = [width_fn(y)/2 + x_off for y in ys_full]
     bot_x = [-width_fn(y)/2 + x_off for y in ys_full[::-1]]
     border_x = top_x + bot_x
     border_y = list(ys_full) + list(ys_full[::-1])
     fig.add_trace(go.Scatter(x=border_x, y=border_y, mode="lines",
-                             line=dict(color=color, width=3),
-                             fill="toself", fillcolor=color, opacity=0.0,
-                             name="Figura", hoverinfo="skip"))
+                                 line=dict(color=color, width=3),
+                                 fill="toself", fillcolor=color, opacity=0.0,
+                                 name="Figura", hoverinfo="skip"))
 
     frames = []
     for i in range(N + 1):
@@ -100,8 +97,8 @@ with tab1:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        b = st.slider("Base (b)", 1.0, 10.0, 5.0, 0.5)
-        h = st.slider("Altura (h)", 1.0, 10.0, 6.0, 0.5)
+        b = st.slider("Base (b)", 1.0, 10.0, 5.0, 0.5, key="ret_b")
+        h = st.slider("Altura (h)", 1.0, 10.0, 6.0, 0.5, key="ret_h")
         st.markdown(f"**Área = {b*h:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
@@ -115,8 +112,8 @@ with tab2:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        b = st.slider("Base (b)", 1.0, 10.0, 6.0, 0.5)
-        h = st.slider("Altura (h)", 1.0, 10.0, 7.0, 0.5)
+        b = st.slider("Base (b)", 1.0, 10.0, 6.0, 0.5, key="tri_b")
+        h = st.slider("Altura (h)", 1.0, 10.0, 7.0, 0.5, key="tri_h")
         st.markdown(f"**Área = {b*h/2:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
@@ -130,7 +127,7 @@ with tab3:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        r = st.slider("Raio (r)", 1.0, 8.0, 5.0, 0.5)
+        r = st.slider("Raio (r)", 1.0, 8.0, 5.0, 0.5, key="cir_r")
         st.markdown(f"**Área = {math.pi*r**2:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
@@ -144,9 +141,9 @@ with tab4:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        B = st.slider("Base maior (B)", 1.0, 10.0, 8.0, 0.5)
-        b = st.slider("Base menor (b)", 1.0, 10.0, 4.0, 0.5)
-        h = st.slider("Altura (h)", 1.0, 10.0, 6.0, 0.5)
+        B = st.slider("Base maior (B)", 1.0, 10.0, 8.0, 0.5, key="trap_B")
+        b = st.slider("Base menor (b)", 1.0, 10.0, 4.0, 0.5, key="trap_b")
+        h = st.slider("Altura (h)", 1.0, 10.0, 6.0, 0.5, key="trap_h")
         st.markdown(f"**Área = {(B+b)*h/2:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
@@ -160,19 +157,15 @@ with tab5:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        r = st.slider("Raio (r)", 1.0, 8.0, 5.0, 0.5, key="set_r")
-        theta = st.slider("Ângulo (°)", 10, 360, 90, 5, key="set_t")
-        A = math.pi * r**2 * theta / 360
+        r_set = st.slider("Raio (r)", 1.0, 8.0, 5.0, 0.5, key="set_r")
+        theta_deg = st.slider("Ângulo (°)", 10, 360, 90, 5, key="set_t")
+        A = math.pi * r_set**2 * theta_deg / 360
         st.markdown(f"**Área = {A:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        ang = math.radians(theta)
-        w_fn = lambda y: 2*math.sqrt(max(0, r**2 - y**2)) if y <= r*math.sin(ang) else 0
-        # Abordagem mais limpa: setor como arco + raios
         def build_setor(r, theta_deg, N=80):
             fig = go.Figure()
             theta_rad = math.radians(theta_deg)
-            # Borda
             t = np.linspace(0, theta_rad, 200)
             bx = r*np.cos(t); by = r*np.sin(t)
             border_x = [0] + list(bx) + [0]
@@ -216,7 +209,7 @@ with tab5:
                               xaxis=dict(range=[-r*1.2, r*1.2], visible=False),
                               yaxis=dict(range=[-r*1.2, r*1.2], visible=False))
             return fig
-        st.plotly_chart(build_setor(r, theta), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(build_setor(r_set, theta_deg), use_container_width=True, config={"displayModeBar": False})
 
 # --- 6. Elipse ---
 with tab6:
@@ -224,13 +217,13 @@ with tab6:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        a = st.slider("Semieixo horizontal (a)", 1.0, 8.0, 6.0, 0.5)
-        b = st.slider("Semieixo vertical (b)", 1.0, 8.0, 4.0, 0.5)
-        st.markdown(f"**Área = {math.pi*a*b:.2f} u²**")
+        a_el = st.slider("Semieixo horizontal (a)", 1.0, 8.0, 6.0, 0.5, key="ell_a")
+        b_el = st.slider("Semieixo vertical (b)", 1.0, 8.0, 4.0, 0.5, key="ell_b")
+        st.markdown(f"**Área = {math.pi*a_el*b_el:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        w_fn = lambda y: 2*a*math.sqrt(max(0, 1 - (y/b)**2))
-        st.plotly_chart(build_area_anim(w_fn, b, N=80, color="#ec4899"),
+        w_fn = lambda y: 2*a_el*math.sqrt(max(0, 1 - (y/b_el)**2))
+        st.plotly_chart(build_area_anim(w_fn, b_el, N=80, color="#ec4899"),
                         use_container_width=True, config={"displayModeBar": False})
 
 # --- 7. Polígono regular ---
@@ -239,46 +232,35 @@ with tab7:
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown('<div class="param-box">', unsafe_allow_html=True)
-        n = st.slider("Número de lados", 3, 16, 6, 1)
-        R = st.slider("Raio da circunferência circunscrita (R)", 1.0, 8.0, 5.0, 0.5)
-        l = 2*R*math.sin(math.pi/n)
-        A = n*l**2/(4*math.tan(math.pi/n))
-        st.markdown(f"**Área = {A:.2f} u²**")
+        n_lados = st.slider("Número de lados", 3, 16, 6, 1, key="pol_n")
+        R_pol = st.slider("Raio da circunferência circunscrita (R)", 1.0, 8.0, 5.0, 0.5, key="pol_R")
+        l_lado = 2*R_pol*math.sin(math.pi/n_lados)
+        A_pol = n_lados*l_lado**2/(4*math.tan(math.pi/n_lados))
+        st.markdown(f"**Área = {A_pol:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        ys_poly = np.linspace(-R, R, 300)
-        # Largura do polígono em cada y (aproximação por raio da seção)
-        # Para polígono regular centrado, a largura em y é 2*R*cos(asin(y/R)) limitado pelas arestas.
-        # Aproximação didática: círculo inscrito + correção (simplificação).
-        # Versão precisa: construir vértices e interseção com scanline.
-        theta = np.linspace(0, 2*math.pi, n, endpoint=False)
-        VX = R*np.cos(theta); VY = R*np.sin(theta)
+        # Vértices do polígono regular
+        theta_v = np.linspace(0, 2*math.pi, n_lados, endpoint=False)
+        VX = R_pol*np.cos(theta_v)
+        VY = R_pol*np.sin(theta_v)
+
         def width_poly(y):
             pts = []
-            for i in range(n):
-                x1,y1 = VX[i], VY[i]; x2,y2 = VX[(i+1)%n], VY[(i+1)%n]
-                if (y1-y)*(y2-y) < 0 or y1==y or y2==y:
-                    if y2-y1 != 0:
-                        t = (y-y1)/(y2-y1)
-                        if 0 <= t <= 1:
-                            pts.append(x1 + t*(x2-x1))
-            if not pts: return 0.0
-            return 2*(max(pts)-min(pts))/2 + (max(pts)-min(pts))
-        # Reimplementar de forma correta:
-        def width_poly(y):
-            pts = []
-            for i in range(n):
-                x1,y1 = VX[i], VY[i]; x2,y2 = VX[(i+1)%n], VY[(i+1)%n]
-                if y1 == y2: continue
-                if min(y1,y2) <= y <= max(y1,y2):
-                    t = (y-y1)/(y2-y1)
-                    pts.append(x1 + t*(x2-x1))
-            return (max(pts)-min(pts)) if len(pts)>=2 else 0.0
-        st.plotly_chart(build_area_anim(width_poly, R, x_off=0, N=80, color="#6366f1"),
+            for i in range(n_lados):
+                x1, y1 = VX[i], VY[i]
+                x2, y2 = VX[(i+1)%n_lados], VY[(i+1)%n_lados]
+                if y1 == y2:
+                    continue
+                if min(y1, y2) <= y <= max(y1, y2):
+                    t = (y - y1) / (y2 - y1)
+                    pts.append(x1 + t*(x2 - x1))
+            return (max(pts) - min(pts)) if len(pts) >= 2 else 0.0
+
+        st.plotly_chart(build_area_anim(width_poly, R_pol, x_off=0, N=80, color="#6366f1"),
                         use_container_width=True, config={"displayModeBar": False})
 
 st.markdown("---")
 st.markdown("""
-<div style="text-align:center; color:#94a3b8; font-size:0.85rem; padding:1rem;">
+<div style="text-align:center; color:#94a3b5; font-size:0.85rem; padding:1rem;">
 📐 <b>Área de Figuras Planas</b> — Animação didática via varredura e integral.
 </div>""", unsafe_allow_html=True)
