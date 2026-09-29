@@ -16,44 +16,45 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===================== UTILIDADES =====================
-def build_scanline_fig(width_fn, y_max, x_off=0, color="#3b82f6", frac=1.0):
-    """Constrói figura com preenchimento parcial por scanline horizontal."""
+def build_scanline_fig(width_fn, y_min, y_max, x_off=0, color="#3b82f6", frac=1.0):
+    """Preenchimento por scanline horizontal de y_min até y_min + frac*(y_max-y_min)."""
     fig = go.Figure()
-    ys_full = np.linspace(0, y_max, 300)
-    top_x = [width_fn(y)/2 + x_off for y in ys_full]
-    bot_x = [-width_fn(y)/2 + x_off for y in ys_full[::-1]]
+    n_pts_border = 400
+    ys_border = np.linspace(y_min, y_max, n_pts_border)
+    top_x = [width_fn(y)/2 + x_off for y in ys_border]
+    bot_x = [-width_fn(y)/2 + x_off for y in ys_border[::-1]]
     border_x = top_x + bot_x
-    border_y = list(ys_full) + list(ys_full[::-1])
+    border_y = list(ys_border) + list(ys_border[::-1])
 
-    # Borda externa (contorno)
+    # Contorno externo
     fig.add_trace(go.Scatter(x=border_x, y=border_y, mode="lines",
-                                  line=dict(color=color, width=3),
-                                  fill="toself", fillcolor=color, opacity=0.0,
-                                  name="Figura", hoverinfo="skip"))
+                                     line=dict(color=color, width=3),
+                                     fill="toself", fillcolor=color, opacity=0.0,
+                                     name="Figura", hoverinfo="skip"))
 
-    # Preenchimento parcial até frac*y_max
-    y_lim = y_max * frac
-    n_pts = max(6, int(300 * frac))
-    ys = np.linspace(0, y_lim, n_pts)
-    tx = [width_fn(y)/2 + x_off for y in ys]
-    bx = [-width_fn(y)/2 + x_off for y in ys[::-1]]
+    # Preenchimento parcial
+    y_lim = y_min + frac * (y_max - y_min)
+    n_pts_fill = max(6, int(n_pts_border * frac))
+    ys_fill = np.linspace(y_min, y_lim, n_pts_fill)
+    tx = [width_fn(y)/2 + x_off for y in ys_fill]
+    bx = [-width_fn(y)/2 + x_off for y in ys_fill[::-1]]
     fx = tx + bx[::-1]
-    fy = list(ys) + list(ys[::-1])
+    fy = list(ys_fill) + list(ys_fill[::-1])
 
     fig.add_trace(go.Scatter(x=fx, y=fy, mode="lines",
-                                  fill="toself", fillcolor=color, opacity=0.35,
-                                  line=dict(color=color, width=2),
-                                  hoverinfo="skip"))
+                                     fill="toself", fillcolor=color, opacity=0.35,
+                                     line=dict(color=color, width=2), hoverinfo="skip"))
 
     # Linha de varredura
-    fig.add_trace(go.Scatter(x=[x_off, x_off], y=[0, y_lim], mode="lines",
-                                  line=dict(color="black", width=2, dash="dash"),
-                                  name="Varredura"))
+    fig.add_trace(go.Scatter(x=[x_off, x_off], y=[y_min, y_lim], mode="lines",
+                                     line=dict(color="black", width=2, dash="dash"),
+                                     name="Varredura"))
 
     fig.update_layout(height=480, showlegend=False, plot_bgcolor="white",
-                      paper_bgcolor="white", margin=dict(l=10,r=10,t=10,b=10),
-                      xaxis=dict(range=[-y_max*1.2+x_off, y_max*1.2+x_off], visible=False),
-                      yaxis=dict(range=[-0.1, y_max*1.1], visible=False))
+                      paper_bgcolor="white", margin=dict(l=10, r=10, t=10, b=10),
+                      xaxis=dict(range=[-abs(y_max)*1.4 + x_off, abs(y_max)*1.4 + x_off],
+                                 visible=False),
+                      yaxis=dict(range=[y_min - 0.2, y_max*1.15], visible=False))
     return fig
 
 # ===================== ABAS =====================
@@ -76,9 +77,8 @@ with tab1:
         st.markdown(f"**Área total = {b*h:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="ret_frac") / 100
-        w_fn = lambda y: b
-        st.plotly_chart(build_scanline_fig(w_fn, h, N=80, color="#3b82f6", frac=frac),
+        frac = st.slider("Preenchimento (%)", 0, 100, 100, 5, key="ret_frac") / 100
+        st.plotly_chart(build_scanline_fig(lambda y: b, 0, h, color="#3b82f6", frac=frac),
                         use_container_width=True, config={"displayModeBar": False})
 
 # --- 2. Triângulo ---
@@ -92,9 +92,8 @@ with tab2:
         st.markdown(f"**Área total = {b*h/2:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="tri_frac") / 100
-        w_fn = lambda y: b * (1 - y/h)
-        st.plotly_chart(build_scanline_fig(w_fn, h, color="#ef4444", frac=frac),
+        frac = st.slider("Preenchimento (%)", 0, 100, 100, 5, key="tri_frac") / 100
+        st.plotly_chart(build_scanline_fig(lambda y: b*(1 - y/h), 0, h, color="#ef4444", frac=frac),
                         use_container_width=True, config={"displayModeBar": False})
 
 # --- 3. Círculo ---
@@ -107,9 +106,9 @@ with tab3:
         st.markdown(f"**Área total = {math.pi*r**2:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="cir_frac") / 100
+        frac = st.slider("Preenchimento (%)", 0, 100, 100, 5, key="cir_frac") / 100
         w_fn = lambda y: 2*math.sqrt(max(0, r**2 - y**2))
-        st.plotly_chart(build_scanline_fig(w_fn, r, color="#10b981", frac=frac),
+        st.plotly_chart(build_scanline_fig(w_fn, -r, r, color="#10b981", frac=frac),
                         use_container_width=True, config={"displayModeBar": False})
 
 # --- 4. Trapézio ---
@@ -124,9 +123,8 @@ with tab4:
         st.markdown(f"**Área total = {(B+b)*h/2:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="trap_frac") / 100
-        w_fn = lambda y: B + (b - B) * (y/h)
-        st.plotly_chart(build_scanline_fig(w_fn, h, color="#f59e0b", frac=frac),
+        frac = st.slider("Preenchimento (%)", 0, 100, 100, 5, key="trap_frac") / 100
+        st.plotly_chart(build_scanline_fig(lambda y: B + (b - B)*(y/h), 0, h, color="#f59e0b", frac=frac),
                         use_container_width=True, config={"displayModeBar": False})
 
 # --- 5. Setor circular ---
@@ -141,9 +139,8 @@ with tab5:
         st.markdown(f"**Área total = {A:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="set_frac") / 100
+        frac = st.slider("Abertura (%)", 0, 100, 100, 5, key="set_frac") / 100
         theta_rad = math.radians(theta_deg)
-        # Setor preenchido até frac do ângulo
         t_full = np.linspace(0, theta_rad, 200)
         bx_full = r_set*np.cos(t_full)
         by_full = r_set*np.sin(t_full)
@@ -158,17 +155,16 @@ with tab5:
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=border_x, y=border_y, mode="lines",
-                                      fill="toself", fillcolor="#8b5cf6", opacity=0.0,
-                                      line=dict(color="#8b5cf6", width=3), hoverinfo="skip"))
+                                         fill="toself", fillcolor="#8b5cf6", opacity=0.0,
+                                         line=dict(color="#8b5cf6", width=3), hoverinfo="skip"))
         fig.add_trace(go.Scatter(x=fx, y=fy, mode="lines",
-                                      fill="toself", fillcolor="#8b5cf6", opacity=0.35,
-                                      line=dict(color="#8b5cf6", width=2), hoverinfo="skip"))
-        # Linha de varredura angular
+                                         fill="toself", fillcolor="#8b5cf6", opacity=0.35,
+                                         line=dict(color="#8b5cf6", width=2), hoverinfo="skip"))
         if frac > 0:
             ex, ey = r_set*math.cos(theta_rad*frac), r_set*math.sin(theta_rad*frac)
             fig.add_trace(go.Scatter(x=[0, ex], y=[0, ey], mode="lines",
-                                          line=dict(color="black", width=2, dash="dash"),
-                                          hoverinfo="skip"))
+                                             line=dict(color="black", width=2, dash="dash"),
+                                             hoverinfo="skip"))
         fig.update_layout(height=480, showlegend=False, plot_bgcolor="white",
                           paper_bgcolor="white", margin=dict(l=10,r=10,t=10,b=10),
                           xaxis=dict(range=[-r_set*1.2, r_set*1.2], visible=False),
@@ -186,9 +182,9 @@ with tab6:
         st.markdown(f"**Área total = {math.pi*a_el*b_el:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="ell_frac") / 100
+        frac = st.slider("Preenchimento (%)", 0, 100, 100, 5, key="ell_frac") / 100
         w_fn = lambda y: 2*a_el*math.sqrt(max(0, 1 - (y/b_el)**2))
-        st.plotly_chart(build_scanline_fig(w_fn, b_el, color="#ec4899", frac=frac),
+        st.plotly_chart(build_scanline_fig(w_fn, -b_el, b_el, color="#ec4899", frac=frac),
                         use_container_width=True, config={"displayModeBar": False})
 
 # --- 7. Polígono regular ---
@@ -204,9 +200,8 @@ with tab7:
         st.markdown(f"**Área total = {A_pol:.2f} u²**")
         st.markdown("</div>", unsafe_allow_html=True)
     with c2:
-        frac = st.slider("Nível de preenchimento (%)", 0, 100, 100, 5, key="pol_frac") / 100
+        frac = st.slider("Preenchimento (%)", 0, 100, 100, 5, key="pol_frac") / 100
 
-        # Vértices do polígono regular
         theta_v = np.linspace(0, 2*math.pi, n_lados, endpoint=False)
         VX = R_pol*np.cos(theta_v)
         VY = R_pol*np.sin(theta_v)
@@ -217,12 +212,12 @@ with tab7:
                 x1, y1 = VX[i], VY[i]
                 x2, y2 = VX[(i+1)%n_lados], VY[(i+1)%n_lados]
                 if y1 == y2: continue
-                if min(y1,y2) <= y <= max(y1,y2):
+                if min(y1, y2) <= y <= max(y1, y2):
                     t = (y - y1) / (y2 - y1)
                     pts.append(x1 + t*(x2 - x1))
             return (max(pts) - min(pts)) if len(pts) >= 2 else 0.0
 
-        st.plotly_chart(build_scanline_fig(width_poly, R_pol, x_off=0, color="#6366f1", frac=frac),
+        st.plotly_chart(build_scanline_fig(width_poly, -R_pol, R_pol, color="#6366f1", frac=frac),
                         use_container_width=True, config={"displayModeBar": False})
 
 st.markdown("---")
